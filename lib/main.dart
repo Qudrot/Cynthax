@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isw_mobile_sdk/isw_mobile_sdk.dart';
-import 'package:isw_mobile_sdk/models/isw_mobile_sdk_sdk_config.dart';
+// Explicitly import the config model to prevent "Unresolved reference"
+import 'package:isw_mobile_sdk/models/isw_mobile_sdk_sdk_config.dart'; 
+
 import 'core/app_theme.dart';
 import 'features/auth/data/repositories/real_auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -22,7 +24,6 @@ void main() async {
   await dotenv.load(fileName: '.env');
   
   if (!kIsWeb) {
-    // Interswitch SDK Configuration from .env
     var config = IswSdkConfig(
       dotenv.env['ISW_MERCHANT_ID'] ?? 'MX276440',
       dotenv.env['ISW_PAY_ITEM_ID'] ?? 'Default_Payable_MX276440',
@@ -32,26 +33,36 @@ void main() async {
     await IswMobileSdk.initialize(config);
   }
 
-  // API and Real-Time Services
   final apiClient = ApiClient();
   final socketService = SocketService();
-  final authRepository = RealAuthRepository(apiClient: apiClient);
-  final tripRepository = RealTripRepository(apiClient: apiClient, socketService: socketService);
 
   runApp(
-    MultiBlocProvider(
+    MultiRepositoryProvider(
       providers: [
-        BlocProvider(
-          create: (context) => AuthBloc(
-            authRepository: authRepository,
+        RepositoryProvider(create: (context) => RealAuthRepository(apiClient: apiClient)),
+        RepositoryProvider(
+          create: (context) => RealTripRepository(
+            apiClient: apiClient, 
             socketService: socketService,
-          )..add(AuthCheckRequested()),
-        ),
-        BlocProvider(
-          create: (context) => TripBloc(tripRepository: tripRepository),
+          ),
         ),
       ],
-      child: const NextStopApp(),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => AuthBloc(
+              authRepository: context.read<RealAuthRepository>(),
+              socketService: socketService,
+            )..add(AuthCheckRequested()),
+          ),
+          BlocProvider(
+            create: (context) => TripBloc(
+              tripRepository: context.read<RealTripRepository>(),
+            ),
+          ),
+        ],
+        child: const NextStopApp(),
+      ),
     ),
   );
 }
@@ -61,10 +72,6 @@ class NextStopApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We can get the repository from the context since it's provided in MultiBlocProvider
-    // But since we created it in main, we could also pass it down or use RepositoryProvider.
-    // For now, let's use context.read if it's available.
-    
     return MaterialApp(
       title: 'NextStop',
       debugShowCheckedModeBanner: false,
@@ -75,7 +82,7 @@ class NextStopApp extends StatelessWidget {
         '/driver_dashboard': (context) => const Scaffold(body: Center(child: Text('Driver Dashboard'))),
         '/dashboard': (context) => const Scaffold(body: Center(child: Text('Passenger Dashboard'))),
         '/add_bank': (context) => AddBankAccountPage(
-              authRepository: context.read<AuthBloc>().authRepository,
+              authRepository: context.read<RealAuthRepository>(),
             ),
         '/wallet': (context) => const DriverWalletScreen(),
       },

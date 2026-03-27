@@ -228,7 +228,7 @@ class DriverWalletScreen extends StatelessWidget {
     bool isCredit,
   ) {
     return Container(
-      margin: const EdgeInsets.bottom(16),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
@@ -281,4 +281,7 @@ class DriverWalletScreen extends StatelessWidget {
       ),
     );
   }
+
+  
 }
+

@@ -1,5 +1,4 @@
 import java.util.Properties
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
@@ -32,7 +31,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // You can keep this for now, but the new standard is the block below
     kotlinOptions {
         jvmTarget = "17"
     }
@@ -61,10 +59,4 @@ android {
 
 flutter {
     source = "../.."
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
 }
