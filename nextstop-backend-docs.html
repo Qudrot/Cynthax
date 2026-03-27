@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NextStop — Backend Architecture & API Docs</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --electric: #0066FF;
+    --yellow:   #FFD100;
+    --green:    #00D68F;
+    --red:      #FF3B30;
+    --bg:       #0A0C12;
+    --surface:  #111420;
+    --border:   #1E2235;
+    --text:     #E8EAF6;
+    --muted:    #5A6080;
+    --mono:     'Space Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,12,18,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+  .logo { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+  .logo span { color: var(--yellow); }
+  .nav-tabs { display: flex; gap: 0.25rem; }
+  .nav-tab {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text); border-color: var(--border); }
+  .nav-tab.active { color: var(--electric); border-color: var(--electric); background: rgba(0,102,255,0.08); }
+
+  /* PAGES */
+  .page { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* SECTION HEADINGS */
+  h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.4rem; }
+  h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.01em; }
+  h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+
+  /* ARCH DIAGRAM */
+  .arch-grid {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .arch-layer {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+  .arch-layer::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .layer-client::before  { background: var(--yellow); }
+  .layer-gateway::before { background: var(--electric); }
+  .layer-core::before    { background: var(--green); }
+  .layer-data::before    { background: #9B59B6; }
+  .layer-external::before{ background: var(--red); }
+
+  .layer-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    opacity: 0.6;
+  }
+  .layer-nodes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .node {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-family: var(--mono);
+    font-weight: 700;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .node-blue   { background: rgba(0,102,255,0.12); border-color: rgba(0,102,255,0.4); color: #6699FF; }
+  .node-yellow { background: rgba(255,209,0,0.1);  border-color: rgba(255,209,0,0.4); color: var(--yellow); }
+  .node-green  { background: rgba(0,214,143,0.1);  border-color: rgba(0,214,143,0.4); color: var(--green); }
+  .node-red    { background: rgba(255,59,48,0.1);  border-color: rgba(255,59,48,0.4); color: #FF6B60; }
+  .node-purple { background: rgba(155,89,182,0.1); border-color: rgba(155,89,182,0.4); color: #BD7BF5; }
+  .node-gray   { background: rgba(90,96,128,0.15); border-color: rgba(90,96,128,0.4); color: #9AA0C0; }
+
+  .flow-arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 1.2rem;
+    padding: 0.2rem;
+  }
+
+  /* ISW FLOW DIAGRAM */
+  .isw-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 1.5rem;
+  }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    position: relative;
+    transition: background 0.2s;
+  }
+  .flow-step:first-child { border-radius: 12px 12px 0 0; }
+  .flow-step:last-child  { border-radius: 0 0 12px 12px; }
+  .flow-step:not(:last-child) { border-bottom: none; }
+  .flow-step:hover { background: rgba(255,255,255,0.03); }
+
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--electric);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--mono);
+  }
+  .step-num.warn { background: var(--red); }
+  .step-num.ok   { background: var(--green); }
+
+  .step-body { flex: 1; }
+  .step-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .step-desc  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  .step-code  {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+    color: var(--green);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* API DOCS */
+  .endpoint-group { margin-bottom: 2.5rem; }
+  .endpoint-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    background: var(--surface);
+  }
+  .endpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .endpoint-header:hover { background: rgba(255,255,255,0.03); }
+  .method {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    border-radius: 4px;
+    min-width: 52px;
+    text-align: center;
+  }
+  .GET    { background: rgba(0,214,143,0.15); color: var(--green); }
+  .POST   { background: rgba(0,102,255,0.15); color: #6699FF; }
+  .PATCH  { background: rgba(255,209,0,0.15); color: var(--yellow); }
+  .DELETE { background: rgba(255,59,48,0.15); color: var(--red); }
+
+  .endpoint-path {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text);
+    flex: 1;
+  }
+  .endpoint-summary { font-size: 0.8rem; color: var(--muted); }
+  .auth-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(155,89,182,0.15);
+    border: 1px solid rgba(155,89,182,0.3);
+    color: #BD7BF5;
+    font-family: var(--mono);
+    font-weight: 700;
+  }
+  .expand-icon { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+  .endpoint-card.open .expand-icon { transform: rotate(180deg); }
+
+  .endpoint-body {
+    display: none;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+  }
+  .endpoint-card.open .endpoint-body { display: block; }
+
+  .body-section { margin-bottom: 1rem; }
+  .body-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+  .code-block {
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    color: #A8B0D0;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.6;
+  }
+  .code-block .key   { color: #6699FF; }
+  .code-block .str   { color: #FFD100; }
+  .code-block .num   { color: var(--green); }
+  .code-block .bool  { color: var(--red); }
+  .code-block .comment { color: #404870; }
+
+  /* SCHEMA */
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  .schema-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .schema-header {
+    padding: 0.75rem 1rem;
+    background: rgba(0,102,255,0.07);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .schema-table-name {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #6699FF;
+  }
+  .schema-icon { font-size: 1rem; }
+  .schema-fields { padding: 0.5rem 0; }
+  .schema-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 1rem;
+    font-size: 0.75rem;
+    border-bottom: 1px solid rgba(30,34,53,0.5);
+  }
+  .schema-field:last-child { border-bottom: none; }
+  .field-name { font-family: var(--mono); color: var(--text); }
+  .field-type { font-family: var(--mono); color: var(--muted); font-size: 0.68rem; }
+  .field-pk   { color: var(--yellow); font-size: 0.6rem; margin-left: 0.25rem; font-weight: 700; }
+  .field-fk   { color: #BD7BF5; font-size: 0.6rem; margin-left: 0.25rem; font-weight: 700; }
+
+  /* COST CALCULATOR */
+  .calc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 540px;
+    margin-top: 1.5rem;
+  }
+  .calc-field { margin-bottom: 1rem; }
+  .calc-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem; font-weight: 600; display: block; }
+  .calc-input {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 0.6rem 0.9rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .calc-input:focus { border-color: var(--electric); }
+  .calc-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--electric);
+    border: none;
+    border-radius: 7px;
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 0.25rem;
+  }
+  .calc-btn:hover { background: #0052CC; }
+  .calc-result {
+    margin-top: 1.25rem;
+    display: grid;
+    gap: 0.5rem;
+    display: none;
+  }
+  .calc-result.show { display: grid; }
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.3);
+    font-size: 0.82rem;
+  }
+  .result-row.highlight { background: rgba(0,214,143,0.1); border: 1px solid rgba(0,214,143,0.2); }
+  .result-val { font-family: var(--mono); font-weight: 700; color: var(--green); }
+  .result-val.yellow { color: var(--yellow); }
+  .result-val.red    { color: var(--red); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Next<span>Stop</span> <span style="opacity:0.3;font-weight:400">Backend Spec</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('arch')">Architecture</button>
+    <button class="nav-tab" onclick="showPage('isw')">ISW Payment Flow</button>
+    <button class="nav-tab" onclick="showPage('api')">API Reference</button>
+    <button class="nav-tab" onclick="showPage('schema')">DB Schema</button>
+    <button class="nav-tab" onclick="showPage('fare')">Fare Engine</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ ARCHITECTURE ═══════════════════════ -->
+<div class="page active" id="page-arch">
+  <h1>System Architecture</h1>
+  <p class="subtitle">NextStop — The Modern Danfo. Node.js / Express / MySQL / Socket.io</p>
+
+  <div class="arch-grid">
+    <div class="arch-layer layer-client">
+      <div class="layer-label">Client Layer</div>
+      <div class="layer-nodes">
+        <div class="node node-yellow">Flutter App (Passenger)</div>
+        <div class="node node-yellow">Flutter App (Driver)</div>
+        <div class="node node-yellow">Socket.io WebSocket</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓ HTTPS / WSS ↓</div>
+
+    <div class="arch-layer layer-gateway">
+      <div class="layer-label">API Gateway Layer</div>
+      <div class="layer-nodes">
+        <div class="node node-blue">Nginx (TLS Termination)</div>
+        <div class="node node-blue">Rate Limiter (express-rate-limit)</div>
+        <div class="node node-blue">Helmet.js (Security Headers)</div>
+        <div class="node node-blue">CORS Policy</div>
+        <div class="node node-blue">JWT Auth Middleware</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <div class="arch-layer layer-core">
+      <div class="layer-label">Application Layer — Express.js (Node.js 18+)</div>
+      <div class="layer-nodes">
+        <div class="node node-green">POST /api/auth/signup</div>
+        <div class="node node-green">POST /api/auth/login</div>
+        <div class="node node-green">POST /api/auth/verify-nin</div>
+        <div class="node node-green">GET /api/rides/available</div>
+        <div class="node node-green">POST /api/rides</div>
+        <div class="node node-green">PATCH /api/rides/:id/status</div>
+        <div class="node node-green">POST /api/rides/:id/join</div>
+        <div class="node node-green">POST /api/payments/initiate</div>
+        <div class="node node-green">POST /api/payments/verify</div>
+        <div class="node node-green">POST /webhooks/interswitch</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <div class="arch-layer layer-core" style="border-left-color: #FF9500;">
+      <div class="layer-label">Service Layer (Business Logic)</div>
+      <div class="layer-nodes">
+        <div class="node node-yellow">interswitchService.js</div>
+        <div class="node node-yellow">fareService.js (Cost-Sharing Algorithm)</div>
+        <div class="node node-yellow">Ride State Machine</div>
+        <div class="node node-yellow">Socket.io Event Emitter</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <div class="arch-layer layer-data">
+      <div class="layer-label">Data Layer</div>
+      <div class="layer-nodes">
+        <div class="node node-purple">MySQL 8 (Primary)</div>
+        <div class="node node-purple">Knex.js Query Builder</div>
+        <div class="node node-purple">Redis (Socket.io Adapter + Rate Limit)</div>
+        <div class="node node-gray">users · drivers · vehicles</div>
+        <div class="node node-gray">rides · ride_joiners · fare_negotiations</div>
+        <div class="node node-gray">transactions · webhook_events · otp_store</div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↑ Server-to-Server Only (no client contact) ↑</div>
+
+    <div class="arch-layer layer-external">
+      <div class="layer-label">External Services (Interswitch)</div>
+      <div class="layer-nodes">
+        <div class="node node-red">ISW Passport (OAuth2 Token)</div>
+        <div class="node node-red">ISW Webpay (Payment Gateway)</div>
+        <div class="node node-red">ISW Transaction Verify API</div>
+        <div class="node node-red">ISW KYC API (NIN Verification)</div>
+        <div class="node node-red">ISW Webhooks (Async Events)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ ISW FLOW ═══════════════════════ -->
+<div class="page" id="page-isw">
+  <h1>Interswitch Payment Flow</h1>
+  <p class="subtitle">Secure server-to-server verification — never trust the client</p>
+
+  <div class="isw-flow">
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Flutter calls POST /api/payments/initiate</div>
+        <div class="step-desc">Flutter sends rideId and payerType (INITIATOR or JOINER). The server computes the correct amount using the fare-splitting algorithm.</div>
+        <div class="step-code">{ "rideId": "uuid", "payerType": "INITIATOR" }</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Server generates txRef + SHA512 Hash</div>
+        <div class="step-desc">A unique txRef (NSP-timestamp-uuid) is generated. A SHA512 hash is computed using ProductID + PayItemID + txRef + Amount + RedirectURL + ClientSecret. Credentials never leave the server.</div>
+        <div class="step-code">hash = SHA512(ProductID + PayItemID + txRef + amountKobo + redirectURL + ClientSecret)</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">PENDING transaction record inserted to MySQL</div>
+        <div class="step-desc">Before redirecting the user, we persist the transaction in MySQL with status=PENDING. This enables idempotency and audit trail.</div>
+        <div class="step-code">INSERT INTO transactions (tx_ref, amount_kobo, status='PENDING', ...) </div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Flutter opens Webpay URL in WebView</div>
+        <div class="step-desc">The server returns a paymentUrl. Flutter renders this in a WebView. The user completes payment on Interswitch's hosted page.</div>
+        <div class="step-code">{ "paymentUrl": "https://sandbox.interswitchng.com/collections/w/pay?..." }</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num warn">!</div>
+      <div class="step-body">
+        <div class="step-title">User returns to app — DO NOT trust Flutter's status</div>
+        <div class="step-desc">After Webpay redirect, Flutter reports a status. This is UNTRUSTED. A malicious client could fake a success. Flutter must call /api/payments/verify next.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Flutter calls POST /api/payments/verify</div>
+        <div class="step-desc">Flutter sends the txRef. The server initiates a server-to-server GET to Interswitch — completely independent of the client's reported status.</div>
+        <div class="step-code">GET https://sandbox.interswitchng.com/collections/api/v1/gettransaction.json
+  ?productid=PRODUCT_ID&transactionreference=txRef&amount=amountKobo
+  Authorization: Bearer {access_token}
+  Hash: {SHA512(ProductID + txRef + ClientSecret)}</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num ok">✓</div>
+      <div class="step-body">
+        <div class="step-title">Dual validation: ResponseCode + Amount Match</div>
+        <div class="step-desc">The server validates TWO conditions simultaneously. Both must pass or the transaction is rejected.</div>
+        <div class="step-code">iswData.ResponseCode === '00'          // ✓ Interswitch confirms success
+Number(iswData.Amount) === storedTx.amount_kobo  // ✓ No amount tampering</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num ok">6</div>
+      <div class="step-body">
+        <div class="step-title">MySQL updated + ride status advanced</div>
+        <div class="step-desc">Only after both validations pass: transaction status set to SUCCESS, ride status advanced to ACCEPTED, full ISW response stored as JSON for audit.</div>
+        <div class="step-code">UPDATE transactions SET status='SUCCESS', isw_raw_response='{...}'
+UPDATE rides SET status='ACCEPTED'</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <div class="step-title">Async: Webhook at POST /webhooks/interswitch</div>
+        <div class="step-desc">Interswitch also POSTs asynchronous events (SUCCESS, REVERSAL). The webhook validates HMAC-SHA512 signature, checks idempotency via webhook_events table, then re-verifies the transaction server-side.</div>
+        <div class="step-code">// Signature validation (constant-time comparison — prevents timing attacks)
+crypto.timingSafeEqual(
+  Buffer.from(req.headers['x-interswitch-signature'], 'hex'),
+  Buffer.from(HMAC-SHA512(rawBody, WEBHOOK_SECRET), 'hex')
+)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ API DOCS ═══════════════════════ -->
+<div class="page" id="page-api">
+  <h1>API Reference</h1>
+  <p class="subtitle">Base URL: <code style="font-family:var(--mono);color:var(--electric)">https://api.nextstop.ng/api</code> — All responses: <code style="font-family:var(--mono);color:var(--muted)">{ success, data | errors }</code></p>
+
+  <!-- AUTH -->
+  <div class="endpoint-group">
+    <h2>🔐 Authentication</h2>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/auth/signup</span>
+        <span class="endpoint-summary">Register passenger or driver</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Request Body</div>
+          <div class="code-block"><span class="key">"email"</span>:    <span class="str">"seyi@techco.ng"</span>,
+<span class="key">"phone"</span>:    <span class="str">"+2348012345678"</span>,
+<span class="key">"password"</span>: <span class="str">"Min8Chars!"</span>,
+<span class="key">"fullName"</span>: <span class="str">"Seyi Adebayo"</span>,
+<span class="key">"role"</span>:     <span class="str">"PASSENGER"</span> <span class="comment">// or "DRIVER"</span></div>
+        </div>
+        <div class="body-section">
+          <div class="body-label">Response 201</div>
+          <div class="code-block"><span class="key">"accessToken"</span>:  <span class="str">"eyJhbGci..."</span>,  <span class="comment">// 15min expiry</span>
+<span class="key">"refreshToken"</span>: <span class="str">"eyJhbGci..."</span>   <span class="comment">// 30d expiry</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/auth/login</span>
+        <span class="endpoint-summary">Authenticate and get tokens</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Response includes user object + tokens</div>
+          <div class="code-block"><span class="key">"user"</span>: {
+  <span class="key">"id"</span>:          <span class="str">"uuid"</span>,
+  <span class="key">"fullName"</span>:    <span class="str">"Seyi Adebayo"</span>,
+  <span class="key">"role"</span>:        <span class="str">"PASSENGER"</span>,
+  <span class="key">"ninVerified"</span>: <span class="bool">false</span>,
+  <span class="key">"isVerified"</span>:  <span class="bool">true</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/auth/verify-nin</span>
+        <span class="endpoint-summary">Driver NIN verification via ISW KYC</span>
+        <span class="auth-badge">🔒 JWT + DRIVER</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Request Body</div>
+          <div class="code-block"><span class="key">"nin"</span>: <span class="str">"12345678901"</span>  <span class="comment">// 11 digits</span></div>
+        </div>
+        <div class="body-section">
+          <div class="body-label">What happens server-side</div>
+          <div class="code-block"><span class="comment">// 1. Fetch OAuth2 token from ISW Passport (cached)</span>
+<span class="comment">// 2. GET ISW KYC API with NIN</span>
+<span class="comment">// 3. On responseCode='00': update users.nin_verified=true</span>
+<span class="comment">// 4. Return {verified: true} — NIN never echoed to client</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIDES -->
+  <div class="endpoint-group">
+    <h2>🚌 Rides</h2>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/rides</span>
+        <span class="endpoint-summary">Initiator creates a new ride</span>
+        <span class="auth-badge">🔒 JWT + PASSENGER</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Request Body</div>
+          <div class="code-block"><span class="key">"pickupAddress"</span>:  <span class="str">"14 Admiralty Way, Lekki Phase 1"</span>,
+<span class="key">"pickupLat"</span>:      <span class="num">6.4301</span>,
+<span class="key">"pickupLng"</span>:      <span class="num">3.4533</span>,
+<span class="key">"dropoffAddress"</span>: <span class="str">"Victoria Island, Lagos"</span>,
+<span class="key">"dropoffLat"</span>:     <span class="num">6.4281</span>,
+<span class="key">"dropoffLng"</span>:     <span class="num">3.4219</span>,
+<span class="key">"rideType"</span>:       <span class="str">"RIDESHARE"</span>,   <span class="comment">// or "SOLO"</span>
+<span class="key">"maxJoiners"</span>:     <span class="num">2</span>,
+<span class="key">"baseFare"</span>:       <span class="num">3000</span>,           <span class="comment">// NGN</span>
+<span class="key">"womenOnly"</span>:      <span class="bool">false</span></div>
+        </div>
+        <div class="body-section">
+          <div class="body-label">Response 201</div>
+          <div class="code-block"><span class="key">"rideId"</span>: <span class="str">"uuid"</span>,
+<span class="key">"status"</span>: <span class="str">"REQUESTED"</span>,
+<span class="key">"fareBreakdown"</span>: {
+  <span class="key">"baseFare"</span>:       <span class="num">3000</span>,
+  <span class="key">"driverEarnings"</span>: <span class="num">2550</span>,   <span class="comment">// 85%</span>
+  <span class="key">"platformFee"</span>:    <span class="num">450</span>,    <span class="comment">// 15%</span>
+  <span class="key">"initiatorPays"</span>:  <span class="num">3000</span>    <span class="comment">// 0 joiners yet</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method GET">GET</span>
+        <span class="endpoint-path">/rides/available?lat=6.43&lng=3.45&radius=5</span>
+        <span class="endpoint-summary">Joiner discovers nearby RIDESHARE rides</span>
+        <span class="auth-badge">🔒 JWT</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Returns — sorted by distance (Haversine)</div>
+          <div class="code-block">[{
+  <span class="key">"id"</span>:               <span class="str">"uuid"</span>,
+  <span class="key">"pickupAddress"</span>:   <span class="str">"Lekki Phase 1"</span>,
+  <span class="key">"dropoffAddress"</span>:  <span class="str">"Victoria Island"</span>,
+  <span class="key">"baseFare"</span>:        <span class="num">3000</span>,
+  <span class="key">"currentJoiners"</span>:  <span class="num">1</span>,
+  <span class="key">"maxJoiners"</span>:      <span class="num">2</span>,
+  <span class="key">"initiatorName"</span>:   <span class="str">"Seyi Adebayo"</span>,
+  <span class="key">"jobTitle"</span>:        <span class="str">"Senior Engineer"</span>,
+  <span class="key">"distance_km"</span>:     <span class="num">1.23</span>
+}]</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method PATCH">PATCH</span>
+        <span class="endpoint-path">/rides/:rideId/status</span>
+        <span class="endpoint-summary">Advance ride state machine</span>
+        <span class="auth-badge">🔒 JWT</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Valid Transitions</div>
+          <div class="code-block">REQUESTED   → NEGOTIATING | ACCEPTED | CANCELLED
+NEGOTIATING → ACCEPTED | CANCELLED
+ACCEPTED    → ARRIVED | CANCELLED
+ARRIVED     → IN_PROGRESS
+IN_PROGRESS → COMPLETED</div>
+        </div>
+        <div class="body-section">
+          <div class="body-label">Request Body</div>
+          <div class="code-block"><span class="key">"status"</span>:       <span class="str">"ARRIVED"</span>,
+<span class="key">"cancelReason"</span>: <span class="str">"Traffic too heavy"</span>  <span class="comment">// optional</span></div>
+        </div>
+        <div class="body-section">
+          <div class="body-label">Real-time Side Effect</div>
+          <div class="code-block"><span class="comment">// Socket.io event emitted to ride room</span>
+io.to(`ride:${rideId}`).emit('ride:status', { rideId, status })</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/rides/:rideId/join</span>
+        <span class="endpoint-summary">Joiner requests to join a rideshare</span>
+        <span class="auth-badge">🔒 JWT + PASSENGER</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Response 201 — split fare pre-calculated</div>
+          <div class="code-block"><span class="key">"status"</span>:             <span class="str">"PENDING"</span>,
+<span class="key">"estimatedSplitFare"</span>: <span class="num">1000</span>  <span class="comment">// ₦3000 / 3 passengers</span></div>
+        </div>
+        <div class="body-section">
+          <div class="body-label">Initiator is notified via Socket.io</div>
+          <div class="code-block">io.to(`user:${initiatorId}`).emit('ride:join_request', {
+  rideId, userId, splitFare: 1000
+})</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENTS -->
+  <div class="endpoint-group">
+    <h2>💳 Payments (Interswitch)</h2>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/payments/initiate</span>
+        <span class="endpoint-summary">Get Webpay URL to open in Flutter WebView</span>
+        <span class="auth-badge">🔒 JWT</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Response</div>
+          <div class="code-block"><span class="key">"txRef"</span>:      <span class="str">"NSP-1720000000-A1B2C3D4"</span>,
+<span class="key">"paymentUrl"</span>: <span class="str">"https://sandbox.interswitchng.com/..."</span>,
+<span class="key">"amountNaira"</span>: <span class="num">1000.00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST">POST</span>
+        <span class="endpoint-path">/payments/verify</span>
+        <span class="endpoint-summary">Server-side verification after WebView returns</span>
+        <span class="auth-badge">🔒 JWT</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-section">
+          <div class="body-label">Flutter calls this IMMEDIATELY on WebView close</div>
+          <div class="code-block"><span class="comment">// Request:</span>
+<span class="key">"txRef"</span>: <span class="str">"NSP-1720000000-A1B2C3D4"</span>
+
+<span class="comment">// Response (after server-to-server ISW check):</span>
+<span class="key">"verified"</span>:    <span class="bool">true</span>,
+<span class="key">"status"</span>:      <span class="str">"SUCCESS"</span>,
+<span class="key">"amountNaira"</span>: <span class="num">1000.00</span>,
+<span class="key">"rideId"</span>:      <span class="str">"uuid"</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCKET.IO -->
+  <div class="endpoint-group">
+    <h2>⚡ Socket.io Real-time Events</h2>
+    <div class="endpoint-card" onclick="toggleEndpoint(this)">
+      <div class="endpoint-header">
+        <span class="method POST" style="background:rgba(255,149,0,0.15);color:#FF9500;">WS</span>
+        <span class="endpoint-path">wss://api.nextstop.ng</span>
+        <span class="endpoint-summary">Auth via handshake token, then join rooms</span>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="code-block"><span class="comment">// Flutter connects:</span>
+io.connect({ auth: { token: accessToken } })
+
+<span class="comment">// Join a ride room for live updates:</span>
+socket.emit('ride:join_room', { rideId })
+
+<span class="comment">// Driver broadcasts location:</span>
+socket.emit('driver:location', { lat: 6.43, lng: 3.45 })
+
+<span class="comment">// Events Flutter listens for:</span>
+socket.on('ride:status',       (data) => ...)  <span class="comment">// status changes</span>
+socket.on('driver:location',   (data) => ...)  <span class="comment">// live GPS</span>
+socket.on('ride:join_request', (data) => ...)  <span class="comment">// new joiner (initiator)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SCHEMA ═══════════════════════ -->
+<div class="page" id="page-schema">
+  <h1>Database Schema</h1>
+  <p class="subtitle">MySQL 8 · InnoDB · utf8mb4 · Normalized (3NF) · All IDs are UUID CHAR(36)</p>
+
+  <div class="schema-grid">
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">👤</span><span class="schema-table-name">users</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36)</span></div>
+        <div class="schema-field"><span class="field-name">email</span><span class="field-type">VARCHAR(255) UNIQUE</span></div>
+        <div class="schema-field"><span class="field-name">phone</span><span class="field-type">VARCHAR(15) UNIQUE</span></div>
+        <div class="schema-field"><span class="field-name">password_hash</span><span class="field-type">VARCHAR(255)</span></div>
+        <div class="schema-field"><span class="field-name">role</span><span class="field-type">ENUM PASSENGER|DRIVER</span></div>
+        <div class="schema-field"><span class="field-name">job_title · company</span><span class="field-type">VARCHAR(120)</span></div>
+        <div class="schema-field"><span class="field-name">nin · nin_verified</span><span class="field-type">VARCHAR · BOOL</span></div>
+        <div class="schema-field"><span class="field-name">women_only_pref</span><span class="field-type">BOOLEAN</span></div>
+        <div class="schema-field"><span class="field-name">refresh_token</span><span class="field-type">VARCHAR(512)</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">🚗</span><span class="schema-table-name">drivers</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36)</span></div>
+        <div class="schema-field"><span class="field-name">user_id <span class="field-fk">FK</span></span><span class="field-type">→ users.id</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">ENUM OFFLINE|ONLINE|ON_RIDE</span></div>
+        <div class="schema-field"><span class="field-name">approval_status</span><span class="field-type">ENUM PENDING|APPROVED</span></div>
+        <div class="schema-field"><span class="field-name">current_lat · lng</span><span class="field-type">DECIMAL(10,8)</span></div>
+        <div class="schema-field"><span class="field-name">total_earnings</span><span class="field-type">DECIMAL(12,2)</span></div>
+        <div class="schema-field"><span class="field-name">payout_bank_code</span><span class="field-type">VARCHAR(10)</span></div>
+        <div class="schema-field"><span class="field-name">rating</span><span class="field-type">DECIMAL(3,2)</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">🛻</span><span class="schema-table-name">vehicles</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36)</span></div>
+        <div class="schema-field"><span class="field-name">driver_id <span class="field-fk">FK</span></span><span class="field-type">→ drivers.id</span></div>
+        <div class="schema-field"><span class="field-name">make · model · year</span><span class="field-type">VARCHAR · YEAR</span></div>
+        <div class="schema-field"><span class="field-name">license_plate</span><span class="field-type">VARCHAR(20) UNIQUE</span></div>
+        <div class="schema-field"><span class="field-name">seat_capacity</span><span class="field-type">TINYINT</span></div>
+        <div class="schema-field"><span class="field-name">license_doc_url</span><span class="field-type">VARCHAR(512)</span></div>
+        <div class="schema-field"><span class="field-name">insurance_doc_url</span><span class="field-type">VARCHAR(512)</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">🗺</span><span class="schema-table-name">rides</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36)</span></div>
+        <div class="schema-field"><span class="field-name">initiator_id <span class="field-fk">FK</span></span><span class="field-type">→ users.id</span></div>
+        <div class="schema-field"><span class="field-name">driver_id <span class="field-fk">FK</span></span><span class="field-type">→ drivers.id</span></div>
+        <div class="schema-field"><span class="field-name">ride_type</span><span class="field-type">ENUM SOLO|RIDESHARE</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">ENUM (7 states)</span></div>
+        <div class="schema-field"><span class="field-name">base_fare</span><span class="field-type">DECIMAL(10,2)</span></div>
+        <div class="schema-field"><span class="field-name">driver_earnings</span><span class="field-type">GENERATED STORED</span></div>
+        <div class="schema-field"><span class="field-name">women_only</span><span class="field-type">BOOLEAN</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">👥</span><span class="schema-table-name">ride_joiners</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36)</span></div>
+        <div class="schema-field"><span class="field-name">ride_id <span class="field-fk">FK</span></span><span class="field-type">→ rides.id</span></div>
+        <div class="schema-field"><span class="field-name">user_id <span class="field-fk">FK</span></span><span class="field-type">→ users.id</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">ENUM PENDING|ACCEPTED...</span></div>
+        <div class="schema-field"><span class="field-name">split_fare</span><span class="field-type">DECIMAL(10,2)</span></div>
+        <div class="schema-field"><span class="field-name">UNIQUE</span><span class="field-type">(ride_id, user_id)</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">💳</span><span class="schema-table-name">transactions</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36)</span></div>
+        <div class="schema-field"><span class="field-name">ride_id <span class="field-fk">FK</span></span><span class="field-type">→ rides.id</span></div>
+        <div class="schema-field"><span class="field-name">tx_ref</span><span class="field-type">VARCHAR(100) UNIQUE</span></div>
+        <div class="schema-field"><span class="field-name">amount_kobo</span><span class="field-type">BIGINT (no floats!)</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">ENUM PENDING|SUCCESS...</span></div>
+        <div class="schema-field"><span class="field-name">isw_raw_response</span><span class="field-type">JSON (full audit)</span></div>
+        <div class="schema-field"><span class="field-name">driver_settled</span><span class="field-type">BOOLEAN</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">🔔</span><span class="schema-table-name">webhook_events</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">id <span class="field-pk">PK</span></span><span class="field-type">CHAR(36) — ISW event ID</span></div>
+        <div class="schema-field"><span class="field-name">source</span><span class="field-type">VARCHAR (INTERSWITCH)</span></div>
+        <div class="schema-field"><span class="field-name">event_type</span><span class="field-type">VARCHAR(80)</span></div>
+        <div class="schema-field"><span class="field-name">payload</span><span class="field-type">JSON</span></div>
+        <div class="schema-field"><span class="field-name">signature</span><span class="field-type">VARCHAR(255)</span></div>
+        <div class="schema-field"><span class="field-name">processed</span><span class="field-type">BOOLEAN (idempotency)</span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header"><span class="schema-icon">🤝</span><span class="schema-table-name">fare_negotiations</span></div>
+      <div class="schema-fields">
+        <div class="schema-field"><span class="field-name">ride_id <span class="field-fk">FK</span></span><span class="field-type">→ rides.id</span></div>
+        <div class="schema-field"><span class="field-name">driver_id <span class="field-fk">FK</span></span><span class="field-type">→ drivers.id</span></div>
+        <div class="schema-field"><span class="field-name">proposed_by</span><span class="field-type">ENUM INITIATOR|DRIVER</span></div>
+        <div class="schema-field"><span class="field-name">proposed_fare</span><span class="field-type">DECIMAL(10,2)</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">PENDING|ACCEPTED...</span></div>
+        <div class="schema-field"><span class="field-name">parent_id</span><span class="field-type">CHAR(36) — counter-offers</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ FARE ENGINE ═══════════════════════ -->
+<div class="page" id="page-fare">
+  <h1>Fare Engine</h1>
+  <p class="subtitle">Interactive cost-sharing simulator — Equal Split Model</p>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;max-width:660px;">
+    <h3 style="margin-bottom:0.75rem;">Algorithm Logic</h3>
+    <div class="code-block" style="font-size:0.75rem;">totalPassengers  = acceptedJoiners + 1            <span class="comment">// Initiator counts</span>
+splitFareEach    = baseFare / totalPassengers       <span class="comment">// Equal split</span>
+platformFee      = baseFare × 0.15                 <span class="comment">// 15% of base</span>
+driverEarnings   = baseFare - platformFee           <span class="comment">// 85% always</span>
+initiatorPays    = splitFareEach                    <span class="comment">// Reduced by joiners</span>
+joinerPays       = splitFareEach                    <span class="comment">// Same rate</span>
+
+<span class="comment">// Driver always earns 85% of baseFare regardless of joiners</span>
+<span class="comment">// Joiners save money; platform earns its cut from all passengers</span></div>
+  </div>
+
+  <div class="calc-card">
+    <h2 style="margin-bottom:1.25rem;">Fare Simulator</h2>
+    <div class="calc-field">
+      <label class="calc-label">Base Fare (₦ NGN)</label>
+      <input class="calc-input" type="number" id="baseFare" value="3000" min="500" step="100" />
+    </div>
+    <div class="calc-field">
+      <label class="calc-label">Number of Accepted Joiners (0–3)</label>
+      <input class="calc-input" type="number" id="joiners" value="2" min="0" max="3" />
+    </div>
+    <div class="calc-field">
+      <label class="calc-label">Platform Fee %</label>
+      <input class="calc-input" type="number" id="feePct" value="15" min="0" max="30" step="1" />
+    </div>
+    <button class="calc-btn" onclick="calculate()">Calculate Split</button>
+
+    <div class="calc-result" id="calcResult">
+      <div class="result-row"><span>Total Passengers</span><span class="result-val" id="r-passengers">—</span></div>
+      <div class="result-row highlight"><span>🧑‍💼 Initiator Pays</span><span class="result-val" id="r-initiator">—</span></div>
+      <div class="result-row highlight"><span>👥 Each Joiner Pays</span><span class="result-val" id="r-joiner">—</span></div>
+      <div class="result-row"><span>💰 Driver Earns</span><span class="result-val yellow" id="r-driver">—</span></div>
+      <div class="result-row"><span>🏢 Platform Fee</span><span class="result-val red" id="r-platform">—</span></div>
+      <div class="result-row"><span>💵 Total Collected</span><span class="result-val" id="r-total">—</span></div>
+      <div class="result-row"><span>💸 Initiator Saves vs Solo</span><span class="result-val" id="r-saving">—</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleEndpoint(card) {
+  card.classList.toggle('open');
+}
+
+function calculate() {
+  const base    = parseFloat(document.getElementById('baseFare').value) || 0;
+  const joiners = parseInt(document.getElementById('joiners').value) || 0;
+  const feePct  = parseFloat(document.getElementById('feePct').value) / 100 || 0.15;
+
+  const total      = joiners + 1;
+  const split      = Math.round((base / total) * 100) / 100;
+  const fee        = Math.round(base * feePct * 100) / 100;
+  const driver     = Math.round((base - fee) * 100) / 100;
+  const collected  = Math.round((split * total) * 100) / 100;
+  const saving     = Math.round((base - split) * 100) / 100;
+
+  const fmt = n => '₦' + n.toLocaleString('en-NG', {minimumFractionDigits: 2});
+
+  document.getElementById('r-passengers').textContent = total;
+  document.getElementById('r-initiator').textContent  = fmt(split);
+  document.getElementById('r-joiner').textContent     = joiners > 0 ? fmt(split) : '—';
+  document.getElementById('r-driver').textContent     = fmt(driver);
+  document.getElementById('r-platform').textContent   = fmt(fee);
+  document.getElementById('r-total').textContent      = fmt(collected);
+  document.getElementById('r-saving').textContent     = saving > 0 ? fmt(saving) : '₦0.00';
+
+  document.getElementById('calcResult').classList.add('show');
+}
+
+// Auto-run on load
+calculate();
+</script>
+</body>
+</html>
