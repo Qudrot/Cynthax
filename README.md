@@ -74,3 +74,8 @@ Timilehin Badiora - Product Manager
 
 
 Backend URL: https://github.com/Qudrot/nextstop_backend
+
+
+Note: This is a project develp for mobile environment, it is best to instal the mobile app on phone because some funtional may not render on web.
+
+URL to download app: 

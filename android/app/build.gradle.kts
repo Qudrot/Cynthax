@@ -1,3 +1,6 @@
+import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,12 +8,19 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val envFile = project.rootProject.file(".env")
-val env = java.util.Properties()
-if (envFile.exists()) {
-    envFile.inputStream().use { env.load(it) }
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
-val mapsApiKey = env.getProperty("GOOGLE_MAPS_API_KEY") ?: ""
+
+val envProperties = Properties()
+val envFile = project.rootProject.file(".env")
+if (envFile.exists()) {
+    envFile.inputStream().use { envProperties.load(it) }
+}
+
+val mapsApiKey = envProperties.getProperty("GOOGLE_MAPS_API_KEY") ?: ""
 
 android {
     namespace = "com.example.nextstop"
@@ -22,8 +32,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // You can keep this for now, but the new standard is the block below
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -50,4 +61,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }

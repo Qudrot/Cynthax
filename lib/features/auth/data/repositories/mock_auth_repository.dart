@@ -94,4 +94,29 @@ class MockAuthRepository implements AuthRepository {
     await Future.delayed(const Duration(seconds: 1));
     print('Mock: NIN $nin verified');
   }
+
+  @override
+  Future<List<dynamic>> getBanks() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return [
+      {'name': 'Access Bank', 'code': '044'},
+      {'name': 'Guaranty Trust Bank', 'code': '058'},
+      {'name': 'First Bank of Nigeria', 'code': '011'},
+      {'name': 'Zenith Bank', 'code': '057'},
+      {'name': 'United Bank for Africa', 'code': '033'},
+    ];
+  }
+
+  @override
+  Future<Map<String, dynamic>?> verifyBankAccount(String bankCode, String accountNumber) async {
+    await Future.delayed(const Duration(seconds: 1));
+    if (accountNumber.length == 10) {
+      return {
+        'account_name': 'CHIDI NWOSU',
+        'account_number': accountNumber,
+        'bank_code': bankCode,
+      };
+    }
+    return null;
+  }
 }

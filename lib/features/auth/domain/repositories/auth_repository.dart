@@ -17,4 +17,6 @@ abstract class AuthRepository {
   Future<UserModel> updateProfile(UserModel user);
   Future<UserModel?> getCurrentUser();
   Future<void> logout();
+  Future<List<dynamic>> getBanks();
+  Future<Map<String, dynamic>?> verifyBankAccount(String bankCode, String accountNumber);
 }

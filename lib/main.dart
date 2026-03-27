@@ -10,11 +10,12 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/pages/splash_screen.dart';
 import 'features/auth/presentation/pages/nin_verification_screen.dart';
+import 'features/auth/presentation/pages/add_bank_account_page.dart';
 import 'features/trips/data/repositories/real_trip_repository.dart';
 import 'features/trips/presentation/bloc/trip_bloc.dart';
 import 'core/api/api_client.dart';
 import 'core/api/socket_service.dart';
-
+import 'screens/driver_wallet_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +61,10 @@ class NextStopApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // We can get the repository from the context since it's provided in MultiBlocProvider
+    // But since we created it in main, we could also pass it down or use RepositoryProvider.
+    // For now, let's use context.read if it's available.
+    
     return MaterialApp(
       title: 'NextStop',
       debugShowCheckedModeBanner: false,
@@ -69,6 +74,10 @@ class NextStopApp extends StatelessWidget {
         '/nin_verification': (context) => const NinVerificationScreen(),
         '/driver_dashboard': (context) => const Scaffold(body: Center(child: Text('Driver Dashboard'))),
         '/dashboard': (context) => const Scaffold(body: Center(child: Text('Passenger Dashboard'))),
+        '/add_bank': (context) => AddBankAccountPage(
+              authRepository: context.read<AuthBloc>().authRepository,
+            ),
+        '/wallet': (context) => const DriverWalletScreen(),
       },
     );
   }

@@ -133,4 +133,14 @@ class RealAuthRepository implements AuthRepository {
       await apiClient.post('/auth/logout');
     } catch (_) {}
   }
+
+  @override
+  Future<List<dynamic>> getBanks() async {
+    return await _authService.getBankList();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> verifyBankAccount(String bankCode, String accountNumber) async {
+    return await _authService.verifyBank(bankCode: bankCode, accountNumber: accountNumber);
+  }
 }
